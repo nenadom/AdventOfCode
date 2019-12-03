@@ -194,5 +194,5 @@
   (filter (lambda (pair)
             (= 19690720
                (compute-inputs initial-state (car pair) (cdr pair))))
-          (nouns+verbs 99)))
+          (nouns+verbs 100)))
 
