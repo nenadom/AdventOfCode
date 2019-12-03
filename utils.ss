@@ -96,3 +96,10 @@
             (range (add1 i) (cons i acc))]))
   (range 0 '()))
 
+
+;; String Number [Number] -> String
+;; produce substring of str with start [, end] params
+(define (string-slice str start . end)
+  (substring str start (if (empty? end) (string-length str) (car end))))
+
+
