@@ -85,3 +85,14 @@
 
 (define (test a b)
   (assert (equal? a b)))
+
+
+;; Number -> (Number . Number)
+;; produce a range of numbers [0, n) (up to n exclusive)
+(define (range n)
+  (define (range i acc)
+    (cond [(= i n) (reverse acc)]
+          [else
+            (range (add1 i) (cons i acc))]))
+  (range 0 '()))
+
