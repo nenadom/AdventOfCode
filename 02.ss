@@ -1,4 +1,4 @@
-#!/usr/bin/env scheme
+#!/usr/bin/env scheme --script
 
 ;; --- Day 2: 1202 Program Alarm ---
 
@@ -91,35 +91,40 @@
 ;; (listof Integer) -> (listof Integer)
 ;; produce specified operations on list of Integers
 (define (intcode-compute intcodes)
-  (define (intcode-compute intcodes! opcode positions remaining)
-    (cond [(empty? remaining) intcodes!]
-          [(= 99 opcode) intcodes!]
-          [(< (length positions) 3) (intcode-compute
-                                      intcodes!
-                                      opcode
-                                      (snoc (car remaining) positions)
-                                      (cdr remaining))]
+  (define (intcode-compute intcodes! pos)
+    (cond [(>= pos (- (length intcodes!) 1)) intcodes!]
           [else
-            (intcode-compute
-              (list-set intcodes!
-                        (caddr positions)
-                        (if (= 1 opcode)
-                          (+ (list-ref intcodes! (car positions))
-                             (list-ref intcodes! (cadr positions)))
-                          (* (list-ref intcodes! (car positions))
-                             (list-ref intcodes! (cadr positions)))))
-              (car remaining)
-              '()
-              (cdr remaining))]))
-  (intcode-compute intcodes
-                   (car intcodes)   ; opcode
-                   '()              ; positions
-                   (cdr intcodes)))
+            (let [(opcode (list-ref intcodes! pos))]
+              (if (= 99 opcode)
+                intcodes!
+                (let [(p1 (list-ref intcodes! (list-ref intcodes! (+ 1 pos))))
+                      (p2 (list-ref intcodes! (list-ref intcodes! (+ 2 pos))))
+                      (p3 (list-ref intcodes! (+ 3 pos)))]
+                  (intcode-compute (list-set intcodes!
+                                             p3
+                                             (if (= 1 opcode)
+                                               (+ p1 p2)
+                                               (* p1 p2)))
+                                   (+ 4 pos)))))]))
+  (intcode-compute intcodes 0))
 
 
 (test (intcode-compute '(1 0 0 0 99)) '(2 0 0 0 99))
 (test (intcode-compute '(2 3 0 3 99)) '(2 3 0 6 99))
 (test (intcode-compute '(2 4 4 5 99 0)) '(2 4 4 5 99 9801))
-;; this fails because it modifies its own instruction set!
 (test (intcode-compute '(1 1 1 4 99 5 6 0 99)) '(30 1 1 4 2 5 6 0 99))
+
+
+(define program-state-1202
+  (list-set
+    (list-set
+      (map string->number
+           (string-split (car (read-file "02.txt")) #\,))
+      1
+      12)
+    2
+    2))
+
+
+(print (car (intcode-compute program-state-1202)))
 
