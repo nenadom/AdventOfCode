@@ -87,8 +87,8 @@
   (assert (equal? a b)))
 
 
-;; Number -> (Number . Number)
-;; produce a range of numbers [0, n) (up to n exclusive)
+;; Integer -> (listof Integer)
+;; produce a range of integers [0, n) (up to n exclusive)
 (define (range n)
   (define (range i acc)
     (cond [(= i n) (reverse acc)]
