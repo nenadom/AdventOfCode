@@ -2,12 +2,63 @@
 
 (load "utils.ss")
 
-;; Point is (Integer . Integer)
-;; interp. a pair of coordinates representing a single point on a plane
-(define P0 '(00 . 00)) ;; origin
-(define P1 '(12 . 00)) ;; on x axis
-(define P2 '(00 . -4)) ;; on y axis
-(define P3 '(-8 . -5)) ;; 3rd quadrant
+;; --- Day 3: Crossed Wires ---
+
+; The gravity assist was successful, and you're well on your way to the Venus
+; refuelling station. During the rush back on Earth, the fuel management system
+; wasn't completely installed, so that's next on the priority list.
+; 
+; Opening the front panel reveals a jumble of wires. Specifically, two wires
+; are connected to a central port and extend outward on a grid. You trace the
+; path each wire takes as it leaves the central port, one wire per line of text
+; (your puzzle input).
+; 
+; The wires twist and turn, but the two wires occasionally cross paths. To fix
+; the circuit, you need to find the intersection point closest to the central
+; port. Because the wires are on a grid, use the Manhattan distance for this
+; measurement. While the wires do technically cross right at the central port
+; where they both start, this point does not count, nor does a wire count as
+; crossing with itself.
+; 
+; For example, if the first wire's path is R8,U5,L5,D3, then starting from the
+; central port (o), it goes right 8, up 5, left 5, and finally down 3:
+; 
+; ...........
+; ...........
+; ...........
+; ....+----+.
+; ....|....|.
+; ....|....|.
+; ....|....|.
+; .........|.
+; .o-------+.
+; ...........
+; 
+; Then, if the second wire's path is U7,R6,D4,L4, it goes up 7, right 6, down
+; 4, and left 4:
+; 
+; ...........
+; .+-----+...
+; .|.....|...
+; .|..+--X-+.
+; .|..|..|.|.
+; .|.-X--+.|.
+; .|..|....|.
+; .|.......|.
+; .o-------+.
+; ...........
+; 
+; These wires cross at two locations (marked X), but the lower-left one is
+; closer to the central port: its distance is 3 + 3 = 6.
+; 
+; Here are a few more examples:
+; 
+;     R75,D30,R83,U83,L12,D49,R71,U7,L72
+;     U62,R66,U55,R34,D71,R55,D58,R83 = distance 159
+;     R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
+;     U98,R91,D20,R16,D67,R40,U7,R15,U6,R7 = distance 135
+; 
+; What is the Manhattan distance from the central port to the closest intersection?
 
 
 ;; Vector is String
@@ -16,35 +67,33 @@
 (define V2 "D1234") ;; move down 1234 steps
 
 
-;; Point Vector -> (listof Point)
-;; produce a list of points resulting from moving from pt to direction
-;; (not including point of origin)
+;; Complex Vector -> (listof Complex)
+;; produce a list of points (complex numbers) resulting from moving 
+;; from pt to direction (not including point of origin)
 (define (move pt vec)
-  (define (next-point pt dir steps)
-    (cond [(string=? dir "U") (cons       (car pt)  (add1 (cdr pt)))]
-          [(string=? dir "R") (cons (add1 (car pt))       (cdr pt))]
-          [(string=? dir "D") (cons       (car pt)  (sub1 (cdr pt)))]
-          [else               (cons (sub1 (car pt))       (cdr pt))]))
-  (define (move last dir steps pts)
+  (define (move last inc steps pts)
     (cond [(zero? steps) pts]
           [else
-            (let [(next (next-point last dir steps))]
-              (move next dir (sub1 steps) (snoc next pts)))]))
+            (let [(next (+ last inc))]
+              (move next inc (sub1 steps) (snoc next pts)))]))
   (move pt
-        (string-slice vec 0 1)
+        (get-inc (string-slice vec 0 1))
         (string->number (string-slice vec 1))
         '()))
 
-(test (move P0 "L0") '())
-(test (move P0 "R8")
-      (list '(1 . 0) '(2 . 0) '(3 . 0) '(4 . 0) '(5 . 0) '(6 . 0) '(7 . 0) '(8 . 0)))
-(test (move (cons 8 0) "U5")
-      (list '(8 . 1) '(8 . 2) '(8 . 3) '(8 . 4) '(8 . 5)))
-(test (move (cons -1 -3) "D3")
-      (list (cons -1 -4) (cons -1 -5) (cons -1 -6)))
+(define (get-inc dir)
+  (cond [(string=? dir "U") 0+i]
+        [(string=? dir "R") 1]
+        [(string=? dir "D") 0-i]
+        [else              -1]))
+
+(test (move 0 "L0") '())
+(test (move 0 "R8") (list 1 2 3 4 5 6 7 8))
+(test (move 8 "U5") (list 8+i 8+2i 8+3i 8+4i 8+5i))
+(test (move -1-3i "D3") (list -1-4i -1-5i -1-6i))
 
 
-;; (listof Vector) -> (listof Point)
+;; (listof Vector) -> (listof Complex)
 ;; produce list of all points from list of vector movement directions
 (define (move-all vecs)
   (define (move-all origin vecs rsf)
@@ -54,7 +103,7 @@
               (move-all (car (reverse this-move))
                         (cdr vecs)
                         (append rsf this-move)))]))
-  (move-all (cons 0 0) vecs '()))
+  (move-all 0 vecs '()))
 
 (define example-a (move-all (string-split "R8,U5,L5,D3" #\,)))
 (define example-b (move-all (string-split "U7,R6,D4,L4" #\,)))
@@ -65,10 +114,14 @@
   (filter (lambda (m) (member m lstb)) lsta))
 
 
-;; Point -> Integer
-;; produce absolute distance of point from origin
+;; produce square of x
+(define (^2 x) (* x x))
+
+
+;; Complex -> Integer
+;; produce absolute distance of point, represented as pair, from origin
 (define (|pt| pt)
-  (+ (abs (car pt)) (abs (cdr pt))))
+  (+ (abs (real-part pt)) (abs (imag-part pt))))
 
 
 ;; (listof Integer) -> Integer
@@ -79,7 +132,7 @@
 
 ;; String String -> Integer
 ;; 1. Convert strings to (listof Vector)
-;; 2. Execute all moves (listof Vector) -> (listof Point)
+;; 2. Execute all moves (listof Vector) -> (listof Complex)
 ;; 3. Find intersecting points
 ;; 4. Produce closest intersection
 (define (smallest-manhattan-distance s1 s2)
@@ -100,4 +153,67 @@
 ;   (let [(input (read-file "03.txt"))]
 ;     (smallest-manhattan-distance (car input) (cadr input))))
 
+(define input (read-file "03.txt"))
+(define wire-1 (move-all (string-split (car input) #\,)))
+(define wire-2 (move-all (string-split (cadr input) #\,)))
+
+(define (abs< a b)
+    (< (|pt| a) (|pt| b)))
+
+
+;; Does the same, but intersects closest points
+;; `closest` is an expanding manhattan radius, growing by order 
+;; of magnitude if intersection empty
+(define (smallest-manhattan-distance-expanding w1 w2)
+  (let [(sorted-w1 (sort abs< w1))
+        (sorted-w2 (sort abs< w2))]
+    (define (iter intersection radius)
+      (if (empty? intersection)
+        (iter (∩ (take sorted-w1 radius) (take sorted-w2 radius)) (* 10 radius))
+        (closest (map |pt| intersection))))
+    (iter '() 1)))
+    
+
+;; --- Part Two ---
+
+; It turns out that this circuit is very timing-sensitive; you actually need to
+; minimize the signal delay.
+; 
+; To do this, calculate the number of steps each wire takes to reach each
+; intersection; choose the intersection where the sum of both wires' steps is
+; lowest. If a wire visits a position on the grid multiple times, use the steps
+; value from the first time it visits that position when calculating the total
+; value of a specific intersection.
+; 
+; The number of steps a wire takes is the total number of grid squares the wire
+; has entered to get to that location, including the intersection being
+; considered. Again consider the example from above:
+; 
+; ...........
+; .+-----+...
+; .|.....|...
+; .|..+--X-+.
+; .|..|..|.|.
+; .|.-X--+.|.
+; .|..|....|.
+; .|.......|.
+; .o-------+.
+; ...........
+; 
+; In the above example, the intersection closest to the central port is reached
+; after 8+5+5+2 = 20 steps by the first wire and 7+6+4+3 = 20 steps by the
+; second wire for a total of 20+20 = 40 steps.
+; 
+; However, the top-right intersection is better: the first wire takes only
+; 8+5+2 = 15 and the second wire takes only 7+6+2 = 15, a total of 15+15 = 30
+; steps.
+; 
+; Here are the best steps for the extra examples from above:
+; 
+;     R75,D30,R83,U83,L12,D49,R71,U7,L72
+;     U62,R66,U55,R34,D71,R55,D58,R83 = 610 steps
+;     R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
+;     U98,R91,D20,R16,D67,R40,U7,R15,U6,R7 = 410 steps
+; 
+; What is the fewest combined steps the wires must take to reach an intersection?
 

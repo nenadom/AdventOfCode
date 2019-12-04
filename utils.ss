@@ -103,3 +103,14 @@
   (substring str start (if (empty? end) (string-length str) (car end))))
 
 
+;; (listof X) Natural -> (listof X)
+;; return list of first n elements in lst
+(define (take lst n)
+    (define (take lst n rsf)
+      (cond [(empty? lst) rsf]
+            [(zero? n) rsf]
+            [else
+             (take (cdr lst) (sub1 n) (snoc (car lst) rsf))]))
+    (take lst n '()))
+
+
