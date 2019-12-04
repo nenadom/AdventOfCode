@@ -117,7 +117,7 @@
 
 ;; Split input by commas and convert to list of numbers
 (define initial-state
-  (map string->number (string-split (car (read-file "02.txt")) #\,)))
+  (map string->number (string-split (car (read-file "inputs/02.txt")) #\,)))
 
 (define program-state-1202
   (list-set (list-set initial-state 1 12) 2 2))

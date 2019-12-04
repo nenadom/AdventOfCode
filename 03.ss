@@ -71,21 +71,23 @@
 ;; produce a list of points (complex numbers) resulting from moving 
 ;; from pt to direction (not including point of origin)
 (define (move pt vec)
+  ;; vector direction determines incrementing step for current movement
+  (define (get-inc dir)
+    (cond [(string=? dir "U") 0+i]
+          [(string=? dir "R") 1]
+          [(string=? dir "D") 0-i]
+          [else              -1]))
+  ;; recursively add points to list while steps not 0
   (define (move last inc steps pts)
     (cond [(zero? steps) pts]
           [else
             (let [(next (+ last inc))]
               (move next inc (sub1 steps) (snoc next pts)))]))
+  
   (move pt
         (get-inc (string-slice vec 0 1))
         (string->number (string-slice vec 1))
         '()))
-
-(define (get-inc dir)
-  (cond [(string=? dir "U") 0+i]
-        [(string=? dir "R") 1]
-        [(string=? dir "D") 0-i]
-        [else              -1]))
 
 (test (move 0 "L0") '())
 (test (move 0 "R8") (list 1 2 3 4 5 6 7 8))
@@ -109,7 +111,7 @@
 (define example-b (move-all (string-split "U7,R6,D4,L4" #\,)))
 
 
-;; I mean how cool is this?? It's a Unicode symbol as a function name!
+;; I mean how cool is this?? It's a Unicode symbol as a function name
 (define (∩ lsta lstb)
   (filter (lambda (m) (member m lstb)) lsta))
 
@@ -126,8 +128,12 @@
   (car (sort < distances)))
 
 
+;; Compose: 
+;; - String -> (listof Vector)
+;; - (listof Vector) -> (listof Complex)
 (define (string->moves s)
   (move-all (string-split s #\,)))
+
 
 ;; String String -> Integer
 ;; 1. Convert strings to (listof Vector)
@@ -149,15 +155,15 @@
 
 ; Prints 303; horribly slow to run
 ; (print
-;   (let [(input (read-file "03.txt"))]
+;   (let [(input (read-file "inputs/03.txt"))]
 ;     (smallest-manhattan-distance (car input) (cadr input))))
 
-(define input (read-file "03.txt"))
+(define input (read-file "inputs/03.txt"))
 (define wire-1 (string->moves (car input)))
 (define wire-2 (string->moves (cadr input)))
 
 (define (abs< a b)
-    (< (|pt| a) (|pt| b)))
+  (< (|pt| a) (|pt| b)))
 
 
 ;; Does the same, but intersects closest points
@@ -171,7 +177,7 @@
         (iter (∩ (take sorted-w1 radius) (take sorted-w2 radius)) (* 10 radius))
         (closest (map |pt| intersection))))
     (iter '() 1)))
-    
+
 (display (smallest-manhattan-distance-expanding wire-1 wire-2)) ; 303
 
 
@@ -221,8 +227,7 @@
 
 ;; Winged it here with 10000 because finding an intersection is 
 ;; exponentially complex, and it's almost certain the point with fewest
-;; combined steps will be the first point of intersection.
-;; There might be maths to prove it for certain, but for now I'll just... yeah.
+;; combined steps will be the first point of intersection (of either wire).
 ;; Additionally, add 2 because we're using 0-based index, twice.
 (define (fewest-combined-steps w1 w2)
   (let [(intersections (∩ (take w1 10000) (take w2 10000)))]

@@ -50,7 +50,7 @@
 (define module-fuel
   (fold-left + 0
              (map mass->fuel 
-                  (map string->number (read-file "01.txt")))))
+                  (map string->number (read-file "inputs/01.txt")))))
 
 (print module-fuel)
 
@@ -109,6 +109,6 @@
              (map
                (lambda (s)
                  (module+fuel (string->number s)))
-               (read-file "01.txt"))))
+               (read-file "inputs/01.txt"))))
 ;; 5193796
 
