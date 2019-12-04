@@ -114,10 +114,6 @@
   (filter (lambda (m) (member m lstb)) lsta))
 
 
-;; produce square of x
-(define (^2 x) (* x x))
-
-
 ;; Complex -> Integer
 ;; produce absolute distance of point, represented as pair, from origin
 (define (|pt| pt)
@@ -130,14 +126,17 @@
   (car (sort < distances)))
 
 
+(define (string->moves s)
+  (move-all (string-split s #\,)))
+
 ;; String String -> Integer
 ;; 1. Convert strings to (listof Vector)
 ;; 2. Execute all moves (listof Vector) -> (listof Complex)
 ;; 3. Find intersecting points
 ;; 4. Produce closest intersection
 (define (smallest-manhattan-distance s1 s2)
-  (closest (map |pt| (∩ (move-all (string-split s1 #\,))
-                        (move-all (string-split s2 #\,))))))
+  (closest (map |pt| (∩ (string->moves s1)
+                        (string->moves s2)))))
 
 (test (smallest-manhattan-distance 
         "R75,D30,R83,U83,L12,D49,R71,U7,L72"
@@ -154,8 +153,8 @@
 ;     (smallest-manhattan-distance (car input) (cadr input))))
 
 (define input (read-file "03.txt"))
-(define wire-1 (move-all (string-split (car input) #\,)))
-(define wire-2 (move-all (string-split (cadr input) #\,)))
+(define wire-1 (string->moves (car input)))
+(define wire-2 (string->moves (cadr input)))
 
 (define (abs< a b)
     (< (|pt| a) (|pt| b)))
@@ -173,6 +172,8 @@
         (closest (map |pt| intersection))))
     (iter '() 1)))
     
+(display (smallest-manhattan-distance-expanding wire-1 wire-2)) ; 303
+
 
 ;; --- Part Two ---
 
@@ -216,4 +217,29 @@
 ;     U98,R91,D20,R16,D67,R40,U7,R15,U6,R7 = 410 steps
 ; 
 ; What is the fewest combined steps the wires must take to reach an intersection?
+
+
+;; Winged it here with 10000 because finding an intersection is 
+;; exponentially complex, and it's almost certain the point with fewest
+;; combined steps will be the first point of intersection.
+;; There might be maths to prove it for certain, but for now I'll just... yeah.
+;; Additionally, add 2 because we're using 0-based index, twice.
+(define (fewest-combined-steps w1 w2)
+  (let [(intersections (∩ (take w1 10000) (take w2 10000)))]
+    (+ 2 (index (car intersections) w1) (index (car intersections) w2))))
+
+(test (fewest-combined-steps (string->moves "R8,U5,L5,D3")
+                             (string->moves "U7,R6,D4,L4"))
+      30)
+
+(test (fewest-combined-steps (string->moves "R75,D30,R83,U83,L12,D49,R71,U7,L72")
+                             (string->moves "U62,R66,U55,R34,D71,R55,D58,R83"))
+      610)
+
+(test (fewest-combined-steps (string->moves "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51")
+                             (string->moves "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))
+      410)
+
+(print
+  (fewest-combined-steps wire-1 wire-2)) ;; 11222
 

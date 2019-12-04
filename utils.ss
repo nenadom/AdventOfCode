@@ -114,3 +114,10 @@
     (take lst n '()))
 
 
+;; X (listof X) -> Natural|False
+;; produce index of el in lst, #f if not found
+(define (index el lst)
+  (let [(tail (member el (reverse lst)))]
+    (and tail (length (cdr tail)))))
+
+
