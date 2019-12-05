@@ -49,11 +49,37 @@
           (list "123" "567" "789")))
 
 
-;; Alias for car
-(define first car)
+;; String -> String | (listof T) -> T
+;; Returns first element of either string or list
+(define (first x)
+  (cond [(string? x) (if (eq? "" x) "" (string-slice x 0 1))]
+        [(list? x) (car x)]
+        [else
+          (and (display x)
+               (raise
+                 (condition
+                   (make-error)
+                   (make-message-condition
+                     (string-append
+                       "first called with above ^^;\n"
+                       "should be called with list or string")))))]))
 
-;; Alias for cdr
-(define rest cdr)
+
+;; String -> String | (listof T) -> (listof T)
+;; Returns remaining elements after first of either string or list
+(define (rest x)
+  (cond [(string? x) (if (eq? "" x) "" (string-slice x 1))]
+        [(list? x) (cdr x)]
+        [else
+          (and (display x)
+               (raise
+                 (condition
+                   (make-error)
+                   (make-message-condition
+                     (string-append
+                       "rest called with above ^^;\n"
+                       "should be called with list or string")))))]))
+
 
 ;; Alias empty list
 (define empty '())
@@ -106,12 +132,12 @@
 ;; (listof X) Natural -> (listof X)
 ;; return list of first n elements in lst
 (define (take lst n)
-    (define (take lst n rsf)
-      (cond [(empty? lst) rsf]
-            [(zero? n) rsf]
-            [else
-             (take (cdr lst) (sub1 n) (snoc (car lst) rsf))]))
-    (take lst n '()))
+  (define (take lst n rsf)
+    (cond [(empty? lst) rsf]
+          [(zero? n) rsf]
+          [else
+            (take (cdr lst) (sub1 n) (snoc (car lst) rsf))]))
+  (take lst n '()))
 
 
 ;; X (listof X) -> Natural|False
@@ -120,4 +146,8 @@
   (let [(tail (member el (reverse lst)))]
     (and tail (length (cdr tail)))))
 
+
+;; TODO refactor last to work with strings
+(define (last lst)
+  (car (reverse lst)))
 
