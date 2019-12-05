@@ -33,9 +33,9 @@
 (define (adjacent-same? s)
   (define (loop last remaining)
     (if (eq? "" remaining) #f
-      (let [(next (string-slice remaining 0 1))]
-        (or (string=? last next)
-            (loop next (string-slice remaining 1))))))
+      (let [(cur (first remaining))]
+        (or (string=? last cur)
+            (loop cur (rest remaining))))))
   (loop "" s))
 
 (test (adjacent-same? "afgh") #f)
@@ -43,15 +43,16 @@
 (test (adjacent-same? "122345") #t)
 (test (adjacent-same? "111111") #t)
 
+
 ;; String -> Boolean
 ;; true if string representation of number contains 
 ;; ever increasing digits
 (define (adjacent-increasing? s)
   (define (loop last remaining)
     (if (eq? "" remaining) #t
-      (let [(next (string-slice remaining 0 1))]
-        (and (string<=? last next)
-             (loop next (string-slice remaining 1))))))
+      (let [(cur (first remaining))]
+        (and (string<=? last cur)
+             (loop cur (rest remaining))))))
   (loop "" s))
 
 (test (adjacent-increasing? "111111") #t)
@@ -97,7 +98,7 @@
     (cond [(eq? "" s) (append rsf (list cur))]
           [(eq? "" cur) (loop (rest s) (first s) rsf)]
           [(string=? (first cur) (first s))
-            (loop (rest s) (string-append cur (first s)) rsf)]
+           (loop (rest s) (string-append cur (first s)) rsf)]
           [else
             (loop (rest s) (first s) (append rsf (list cur)))]))
   (loop s "" '()))
@@ -125,3 +126,4 @@
                             (map number->string
                                  (map (lambda (x) (+ x INPUT-MIN))
                                       (range (- INPUT-MAX INPUT-MIN)))))))))
+
