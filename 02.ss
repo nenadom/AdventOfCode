@@ -87,32 +87,7 @@
 ; value 2. What value is left at position 0 after the program halts?
 
 (load "utils.ss")
-
-;; (listof Integer) -> (listof Integer)
-;; produce specified operations on list of Integers
-(define (intcode-compute intcodes)
-  (define (intcode-compute intcodes! pos)
-    (cond [(>= pos (- (length intcodes!) 1)) intcodes!]
-          [else
-            (let [(opcode (list-ref intcodes! pos))]
-              (if (= 99 opcode)
-                intcodes!
-                (let [(p1 (list-ref intcodes! (list-ref intcodes! (+ 1 pos))))
-                      (p2 (list-ref intcodes! (list-ref intcodes! (+ 2 pos))))
-                      (p3 (list-ref intcodes! (+ 3 pos)))]
-                  (intcode-compute (list-set intcodes!
-                                             p3
-                                             (if (= 1 opcode)
-                                               (+ p1 p2)
-                                               (* p1 p2)))
-                                   (+ 4 pos)))))]))
-  (intcode-compute intcodes 0))
-
-
-(test (intcode-compute '(1 0 0 0 99)) '(2 0 0 0 99))
-(test (intcode-compute '(2 3 0 3 99)) '(2 3 0 6 99))
-(test (intcode-compute '(2 4 4 5 99 0)) '(2 4 4 5 99 9801))
-(test (intcode-compute '(1 1 1 4 99 5 6 0 99)) '(30 1 1 4 2 5 6 0 99))
+(load "intcode-computer.ss")
 
 
 ;; Split input by commas and convert to list of numbers
