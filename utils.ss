@@ -21,6 +21,8 @@
   (display (string-append (if (number? s) (number->string s) s) "\n")))
 
 
+(define (identity x) x)
+
 ;; String Char -> (listof String)
 ;; produce list of substrings from str split with tok
 (define (string-split str tok)
