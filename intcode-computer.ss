@@ -29,6 +29,14 @@
     (and (print (list-ref program addr)) program)))
 
 
+(define (intcode:jump program ptr m1 m2 predicate)
+  (let* [(a1 (list-ref program (+ 1 ptr)))
+         (a2 (list-ref program (+ 2 ptr)))
+         (p1 (if (zero? m1) (list-ref program a1) a1))
+         (p2 (if (zero? m2) (list-ref program a2) a2))]
+    (if (predicate p1) p2 (+ 3 ptr))))
+
+
 (define (pad-left lst n pad)
   (if (>= (length lst) n)
     lst
@@ -37,6 +45,7 @@
 
 (define (parse-instruction instruction)
   (pad-left (string->list (number->string instruction)) 5 #\0))
+
 
 (define (A instr)
   (string->number (string (car instr))))
@@ -49,6 +58,7 @@
 
 (define (DE instr)
   (string->number (list->string (cdddr instr))))
+
 
 (define (intcode-compute program)
   (define (exec-instruction program ptr)
@@ -64,6 +74,10 @@
           [(2)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 *) (+ 4 ptr))]
           [(3)  (exec-instruction (intcode:set program ptr) (+ 2 ptr))]
           [(4)  (exec-instruction (intcode:get program ptr) (+ 2 ptr))]
+          [(5)  (exec-instruction program (intcode:jump program ptr m1 m2 (lambda (x) (not (zero? x)))))] ; jump-if-true
+          [(6)  (exec-instruction program (intcode:jump program ptr m1 m2 zero?))] ; jump-if-false
+          [(7)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 (lambda (x y) (if (< x y) 1 0))) (+ 4 ptr))] ; less than
+          [(8)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 (lambda (x y) (if (= x y) 1 0))) (+ 4 ptr))] ; equals
           [(99) program]))))
   (exec-instruction program 0))
 

@@ -153,3 +153,7 @@
 (define (last lst)
   (car (reverse lst)))
 
+
+(define (string->program s)
+  (map string->number (string-split s #\,)))
+
