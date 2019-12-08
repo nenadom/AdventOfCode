@@ -88,8 +88,7 @@
 
 ;; (listof X) -> Boolean
 ;; produce true if list empty
-(define (empty? lst)
-  (equal? '() lst))
+(define empty? null?)
 
 
 ;; (listof X) Integer X -> (listof X)
@@ -117,12 +116,7 @@
 
 ;; Integer -> (listof Integer)
 ;; produce a range of integers [0, n) (up to n exclusive)
-(define (range n)
-  (define (range i acc)
-    (cond [(= i n) (reverse acc)]
-          [else
-            (range (add1 i) (cons i acc))]))
-  (range 0 '()))
+(define range iota)
 
 
 ;; String Number [Number] -> String
