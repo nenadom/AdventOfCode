@@ -90,6 +90,8 @@
 ;; produce true if list empty
 (define empty? null?)
 
+(define (false? x)
+  (equal? #f x))
 
 ;; (listof X) Integer X -> (listof X)
 ;; produce new list from lst such that at pos value is x

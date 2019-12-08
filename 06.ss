@@ -53,8 +53,75 @@
                                    ...))])))
 
 
-;; Example from the assignment using list
-(define orbits '(COM B (G H) C D (I) E (J K L) F))
+;; --- Day 6: Universal Orbit Map ---
+
+; You've landed at the Universal Orbit Map facility on Mercury. Because
+; navigation in space often involves transferring between orbits, the orbit
+; maps here are useful for finding efficient routes between, for example, you
+; and Santa. You download a map of the local orbits (your puzzle input).
+; 
+; Except for the universal Center of Mass (COM), every object in space is in
+; orbit around exactly one other object. An orbit looks roughly like this:
+; 
+;                   \
+;                    \
+;                     |
+;                     |
+; AAA--> o            o <--BBB
+;                     |
+;                     |
+;                    /
+;                   /
+; 
+; In this diagram, the object BBB is in orbit around AAA. The path that BBB
+; takes around AAA (drawn with lines) is only partly shown. In the map data,
+; this orbital relationship is written AAA)BBB, which means "BBB is in orbit
+; around AAA".
+; 
+; Before you use your map data to plot a course, you need to make sure it
+; wasn't corrupted during the download. To verify maps, the Universal Orbit Map
+; facility uses orbit count checksums - the total number of direct orbits (like
+; the one shown above) and indirect orbits.
+; 
+; Whenever A orbits B and B orbits C, then A indirectly orbits C. This chain
+; can be any number of objects long: if A orbits B, B orbits C, and C orbits D,
+; then A indirectly orbits D.
+; 
+; For example, suppose you have the following map:
+; 
+; COM)B
+; B)C
+; C)D
+; D)E
+; E)F
+; B)G
+; G)H
+; D)I
+; E)J
+; J)K
+; K)L
+; 
+; Visually, the above map of orbits looks like this:
+; 
+;         G - H       J - K - L
+;        /           /
+; COM - B - C - D - E - F
+;                \
+;                 I
+; 
+; In this visual representation, when two objects are connected by a line, the
+; one on the right directly orbits the one on the left.
+; 
+; Here, we can count the total number of orbits as follows:
+; 
+;     D directly orbits C and indirectly orbits B and COM, a total of 3 orbits.
+;     L directly orbits K and indirectly orbits J, E, D, C, B, and COM, a total of 7 orbits.
+;     COM orbits nothing.
+; 
+; The total number of direct and indirect orbits in this example is 42.
+; 
+; What is the total number of direct and indirect orbits in your map data?
+
 
 (define-structure orbit name direct)
 ;; Orbit is (make-orbit Symbol Orbit|(listof Orbit))
@@ -64,7 +131,7 @@
 ;;   - Orbit
 ;;   - (listof Orbit) if multiple direct orbits on object
 
-;; Same example using Orbit struct
+;; Example using Orbit struct
 (define J (make-orbit 'J
                       (list (make-orbit 'K
                                         (list (make-orbit 'L '()))))))
@@ -100,6 +167,15 @@
   (fn-for-orbit orbit name))
 
 
+;; Orbit Symbol -> Boolean
+(define (has-orbit-direct? orbit name)
+  (member name (map orbit-name (orbit-direct orbit))))
+
+(test (has-orbit-direct? orbits2 'B) '(B))
+(test (has-orbit-direct? B 'L) #f)
+(test (has-orbit-direct? B 'G) '(G C))
+
+
 ;; Orbit -> String -> Orbit | False
 ;; Given string of format "{name}){next}" find orbit with symbol name
 ;; and if found mutate its orbit-direct list bt adding orbit with symbol `next`,
@@ -110,11 +186,17 @@
            (name (string->symbol (car m)))
            (next (make-orbit (string->symbol (cadr m)) '()))
            (target (find-orbit orbit name))]
-      (and target (set-orbit-direct! target
-                                     (cons next
-                                           (orbit-direct target)))))))
+      (cond [(false? target) target]
+            [(has-orbit-direct? target (orbit-name next)) #f]
+            [else
+              (and (set-orbit-direct! target
+                                      (cons next
+                                            (orbit-direct target)))
+                   #t)]))))
 
 
+;; Orbit (listof String) -> Orbit
+;; Mutate orbits by adding all mappings to it
 (define (build-orbits source mappings)
   (for-each (add-mapping source) mappings))
 
@@ -138,7 +220,7 @@ K)L")
 
 
 ;; Orbit -> Number
-;; Count total number of direct orbits
+;; Count total number of direct orbits (i.e. node count)
 (define (direct orbit)
   ;; rsf is Integer; result of direct nodes visited so far
   ;; todo is (listof Orbit)
@@ -174,5 +256,29 @@ K)L")
   (iter o 0))
 
 (test (direct+indirect orbits3) 42)
+
+
+(define input-mappings (read-file "inputs/06.txt"))
+
+;; If left orbit not found, mapping added to end of queue.
+;; Assumes input is valid & will finish.
+(define (build-orbits-revolving orbit mappings)
+  (cond [(null? mappings) "done building orbits"]
+        [else
+          (let [(added? ((add-mapping orbit) (car mappings)))]
+            (if added?
+              (build-orbits-revolving orbit
+                                      (cdr mappings))
+              (build-orbits-revolving orbit
+                                      (snoc (car mappings) (cdr mappings)))))]))
+
+
+;; Setup orbit tree from input
+(define O (make-orbit 'COM '()))
+(build-orbits-revolving O input-mappings)
+(test (direct O) (length input-mappings))
+
+(print
+  (direct+indirect O))
 
 
