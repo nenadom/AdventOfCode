@@ -1,56 +1,7 @@
 #!/usr/bin/env scheme --script
 
-
 (load "utils.ss")
-
-
-;; https://www.scheme.com/tspl4/syntax.html#./syntax:s70
-(define-syntax define-structure
-  (lambda (x)
-    (define gen-id
-      (lambda (template-id . args)
-        (datum->syntax template-id
-                       (string->symbol
-                         (apply string-append
-                                (map (lambda (x)
-                                       (if (string? x)
-                                         x
-                                         (symbol->string (syntax->datum x))))
-                                     args))))))
-    (syntax-case x ()
-                 [(_ name field ...)
-                  (with-syntax ([constructor (gen-id #'name "make-" #'name)]
-                                [predicate (gen-id #'name #'name "?")]
-                                [(access ...)
-                                 (map (lambda (x) (gen-id x #'name "-" x))
-                                      #'(field ...))]
-                                [(assign ...)
-                                 (map (lambda (x)
-                                        (gen-id x "set-" #'name "-" x "!"))
-                                      #'(field ...))]
-                                [structure-length (+ (length #'(field ...)) 1)]
-                                [(index ...)
-                                 (let f ([i 1] [ids #'(field ...)])
-                                   (if (null? ids)
-                                     '()
-                                     (cons i (f (+ i 1) (cdr ids)))))])
-                               #'(begin
-                                   (define constructor
-                                     (lambda (field ...)
-                                       (vector 'name field ...)))
-                                   (define predicate
-                                     (lambda (x)
-                                       (and (vector? x)
-                                            (= (vector-length x) structure-length)
-                                            (eq? (vector-ref x 0) 'name))))
-                                   (define access
-                                     (lambda (x)
-                                       (vector-ref x index)))
-                                   ...
-                                   (define assign
-                                     (lambda (x update)
-                                       (vector-set! x index update)))
-                                   ...))])))
+(load "struct.ss")
 
 
 ;; --- Day 6: Universal Orbit Map ---
@@ -280,5 +231,116 @@ K)L")
 
 (print
   (direct+indirect O))
+
+
+;; --- Part Two ---
+
+; Now, you just need to figure out how many orbital transfers you (YOU) need to
+; take to get to Santa (SAN).
+; 
+; You start at the object YOU are orbiting; your destination is the object SAN
+; is orbiting. An orbital transfer lets you move from any object to an object
+; orbiting or orbited by that object.
+; 
+; For example, suppose you have the following map:
+; 
+; COM)B
+; B)C
+; C)D
+; D)E
+; E)F
+; B)G
+; G)H
+; D)I
+; E)J
+; J)K
+; K)L
+; K)YOU
+; I)SAN
+; 
+; Visually, the above map of orbits looks like this:
+; 
+;                           YOU
+;                          /
+;         G - H       J - K - L
+;        /           /
+; COM - B - C - D - E - F
+;                \
+;                 I - SAN
+; 
+; In this example, YOU are in orbit around K, and SAN is in orbit around I. To
+; move from K to I, a minimum of 4 orbital transfers are required:
+; 
+;     K to J
+;     J to E
+;     E to D
+;     D to I
+; 
+; Afterward, the map of orbits looks like this:
+; 
+;         G - H       J - K - L
+;        /           /
+; COM - B - C - D - E - F
+;                \
+;                 I - SAN
+;                  \
+;                   YOU
+; 
+; What is the minimum number of orbital transfers required to move from the
+; object YOU are orbiting to the object SAN is orbiting? (Between the objects
+; they are orbiting - not between YOU and SAN.)
+
+
+;; Orbit Symbol -> (listof Symbol)
+;; Find path to target node; empty if not found
+(define (path-to-node start target)
+  (define (fn-for-o current path todo)
+    (cond [(eq? (orbit-name current) target) path]
+          [(null? (orbit-direct current)) '()]
+          [else
+            (apply append '()
+                   (map (lambda (o)
+                          (fn-for-todo (cons (orbit-name current) path)
+                                       (cons o todo)))
+                        (orbit-direct current)))]))
+  ;; (listof Symbol) (listof Orbit) -> (listof Symbol)            
+  (define (fn-for-todo path todo)
+    (cond [(null? todo) path]
+          [else
+            (fn-for-o (car todo)
+                      path
+                      (cdr todo))]))
+  (reverse (fn-for-o start '() '())))
+
+(test (dfs orbits2 'B) '(COM))
+(test (dfs orbits2 'COM) '())
+
+
+;; (listof X) (listof Y) -> (listof X - Y)
+(define (set-diff a b)
+  (cond [(null? a) '()]
+        [(member (car a) b) (set-diff (cdr a) b)]
+        [else (cons (car a) (set-diff (cdr a) b))]))
+
+
+;; Test from example
+((add-mapping orbits3) "K)YOU")
+((add-mapping orbits3) "I)SAN")
+
+(test
+  (let [(to-you (path-to-node orbits3 'YOU))
+        (to-san (path-to-node orbits3 'SAN))]
+    (+ (length (set-diff to-you to-san))
+       (length (set-diff to-san to-you))))
+  4)
+
+
+;; Solve part 2:
+(define to-you (path-to-node O 'YOU))
+(define to-san (path-to-node O 'SAN))
+
+(print
+  (+ (length (set-diff to-you to-san))
+     (length (set-diff to-san to-you))))
 
 
