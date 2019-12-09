@@ -18,15 +18,17 @@
     (list-set program addr (operator p1 p2))))
 
 
-(define (intcode:set program ptr)
-  (let [(in (read))
+(define (intcode:set program ptr read-port)
+  (let [(in (read-port))
         (addr (list-ref program (+ 1 ptr)))]
     (list-set program addr (if (string? in) (string->number in) in))))
 
 
-(define (intcode:get program ptr)
+(define (intcode:get program ptr write-port)
   (let [(addr (list-ref program (+ 1 ptr)))]
-    (and (print (list-ref program addr)) program)))
+    (and (for-each write-port
+                   (list (list-ref program addr) #\newline))
+         program)))
 
 
 (define (intcode:jump program ptr m1 m2 predicate)
@@ -60,26 +62,33 @@
   (string->number (list->string (cdddr instr))))
 
 
-(define (intcode-compute program)
-  (define (exec-instruction program ptr)
-    (if (>= ptr (upper-bound program))
-      program
-      (let* [(instruction (parse-instruction (list-ref program ptr)))
-             (m1 (C instruction))
-             (m2 (B instruction))
-             (m3 (A instruction))
-             (opcode (DE instruction))]
-        (case opcode
-          [(1)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 +) (+ 4 ptr))]
-          [(2)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 *) (+ 4 ptr))]
-          [(3)  (exec-instruction (intcode:set program ptr) (+ 2 ptr))]
-          [(4)  (exec-instruction (intcode:get program ptr) (+ 2 ptr))]
-          [(5)  (exec-instruction program (intcode:jump program ptr m1 m2 (lambda (x) (not (zero? x)))))] ; jump-if-true
-          [(6)  (exec-instruction program (intcode:jump program ptr m1 m2 zero?))] ; jump-if-false
-          [(7)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 (lambda (x y) (if (< x y) 1 0))) (+ 4 ptr))] ; less than
-          [(8)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 (lambda (x y) (if (= x y) 1 0))) (+ 4 ptr))] ; equals
-          [(99) program]))))
-  (exec-instruction program 0))
+(define (intcode-compute program . buffers)
+  (let [(buf:read
+          (if (= 2 (length buffers)) (car buffers)
+            read))
+        (buf:write
+          (if (= 2 (length buffers)) (cadr buffers)
+            display))]
+
+    (define (exec-instruction program ptr)
+      (if (>= ptr (upper-bound program))
+        program
+        (let* [(instruction (parse-instruction (list-ref program ptr)))
+               (m1 (C instruction))
+               (m2 (B instruction))
+               (m3 (A instruction))
+               (opcode (DE instruction))]
+          (case opcode
+            [(1)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 +) (+ 4 ptr))]
+            [(2)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 *) (+ 4 ptr))]
+            [(3)  (exec-instruction (intcode:set program ptr buf:read) (+ 2 ptr))]
+            [(4)  (exec-instruction (intcode:get program ptr buf:write) (+ 2 ptr))]
+            [(5)  (exec-instruction program (intcode:jump program ptr m1 m2 (lambda (x) (not (zero? x)))))] ; jump-if-true
+            [(6)  (exec-instruction program (intcode:jump program ptr m1 m2 zero?))] ; jump-if-false
+            [(7)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 (lambda (x y) (if (< x y) 1 0))) (+ 4 ptr))] ; less than
+            [(8)  (exec-instruction (intcode:arithmetic program ptr m1 m2 m3 (lambda (x y) (if (= x y) 1 0))) (+ 4 ptr))] ; equals
+            [(99) program]))))
+    (exec-instruction program 0)))
 
 
 (test (intcode-compute '(1 0 0 0 99)) '(2 0 0 0 99))
