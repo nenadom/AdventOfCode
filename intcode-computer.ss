@@ -26,8 +26,7 @@
 
 (define (intcode:get program ptr write-port)
   (let [(addr (list-ref program (+ 1 ptr)))]
-    (and (for-each write-port
-                   (list (list-ref program addr) #\newline))
+    (and (write-port (list-ref program addr))
          program)))
 
 
