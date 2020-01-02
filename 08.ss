@@ -140,25 +140,6 @@
   (iter args -1))
 
 
-;(define (render-sif img w)
-;  (define (display-row row)
-;    (begin
-;      (map (lambda (pix)
-;             (begin
-;               (if (zero? pix)
-;                 (display #\#)
-;                 (display #\ ))
-;               (display #\ )))
-;           row)
-;      (display "\n")))
-;  (define (iter row remaining)
-;    (cond [(null? remaining) (display-row row)]
-;          [else
-;            (begin
-;              (display-row row)
-;              (iter (take remaining w) (list-tail remaining w)))]))
-;  (iter '() img))
-;
 (define (display-row r)
   (begin
     (for-each

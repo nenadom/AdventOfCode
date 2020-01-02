@@ -48,8 +48,8 @@
     (if (null? phase-settings)
       program
       (and (write-buffer! (car phase-settings))
-           (display BUFFER)
-           (display "\n")
+;           (display BUFFER)
+;           (display "\n")
            (loop (amp program) (cdr phase-settings)))))
   (and (set! BUFFER (list 0))
        (loop program phase-settings)
@@ -93,4 +93,7 @@
                  (amp-circuit program phases))
                (pset 5)))]
     (car (sort > thruster-outputs))))
+
+(print
+  (find-highest program))
 

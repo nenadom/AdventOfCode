@@ -22,8 +22,12 @@
          ;; Parameters that an instruction writes to 
          ;; will never be in immediate mode.
          (addr (list-ref program (+ 3 ptr)))]
-    (list-set program addr (operator (get-param program m1 a1)
-                                     (get-param program m2 a2)))))
+    (list-set program
+              (if (= 2 m3)
+                (+ RELATIVE-BASE addr)
+                addr)
+              (operator (get-param program m1 a1)
+                        (get-param program m2 a2)))))
 
 
 (define (intcode:set program ptr m read-port)
