@@ -27,17 +27,13 @@
           (symbol->string (cdr p)))))))
 
 
-;; Hashtable<Line, (listof Point)>
-(define ht (make-hashtable pair-hash equal?))
-
+;; Void -> Hashtable<Line, (listof Point)>
 (define (make-ht)
   (make-hashtable pair-hash equal?))
 
-(define (reset-ht)
-  (set! ht (make-hashtable pair-hash equal?)))
-
 
 ;; some test entries
+;; Hashtable<Line, (listof Point)>
 (define __test-ht (make-hashtable pair-hash equal?))
 (hashtable-cell __test-ht '(3 . 2) '('(5 . 1)))
 (hashtable-cell __test-ht '(3 . 2) '('(5 . 2))) ;; stays '(5 . 1)
@@ -72,6 +68,9 @@
 (test (slope-intercept '(2 . 2) '(1 . 0)) '(2 . -2))
 
 
+;; Hashtable<Line, (listof Point)> (listof Point) -> Void
+;; find slope-intercept line form between each point and every other
+;; point in pts, and add them to hashtable ht
 (define (add-points ht pts)
   (for-each
     (lambda (pt1)
@@ -86,37 +85,12 @@
         pts))
     pts))
 
-; .#..#
-; .....
-; #####
-; ....#
-; ...##
-(define ex1
-  (list '(1 . 0) '(4 . 0) '(0 . 2) '(1 . 2) '(2 . 2) '(3 . 2) '(4 . 2)
-        '(4 . 3) '(3 . 4) '(4 . 4)))
 
-(add-points ht ex1)
-
-
-(define (in-line? ht)
-  (let [(vals (vector->list (hashtable-values ht)))]
-    (lambda (pt)
-      (apply + (map (lambda (pts)
-                      (if (member pt pts) 1 0))
-                    vals)))))
-
-
-(define (map->points m)
-  (define (map->points x y acc chars)
-    (cond [(empty? chars) (reverse acc)]
-          [(char=? #\. (car chars))
-           (map->points (add1 x) y acc (cdr chars))]
-          [(char=? #\# (car chars))
-           (map->points (add1 x) y (cons (cons x y) acc) (cdr chars))]
-          [(char=? #\newline (car chars))
-           (map->points 0 (add1 y) acc (cdr chars))]))
-  (map->points 0 0 '() (string->list m)))
-
+;; Map is String
+;; interp. a 2D map of asteroids; origin is top left
+;;  - #: asteroid
+;;  - .: not asteroid
+;; following are examples from puzzle:
 
 (define m1
 ".#..#
@@ -124,6 +98,11 @@
 #####
 ....#
 ...##")
+
+;; same as above
+(define ex1
+  (list '(1 . 0) '(4 . 0) '(0 . 2) '(1 . 2) '(2 . 2) '(3 . 2) '(4 . 2)
+        '(4 . 3) '(3 . 4) '(4 . 4)))
 
 (test (map->points m1) ex1)
 
@@ -139,17 +118,6 @@
 ##...#..#.
 .#....####")
 
-(define ex2 (map->points m2))
-
-(reset-ht)
-
-(add-points ht ex2)
-
-(define ex2a
-  (map cons
-       ex2
-       (map (in-line? ht) ex2)))
-
 (define m3
 "#.#...#.#.
 .###....#.
@@ -161,9 +129,6 @@
 ..##....##
 ......#...
 .####.###.")
-
-(define ex3 (map->points m3))
-
 
 (define m4
 ".#..#..###
@@ -199,12 +164,69 @@
 #.#.#.#####.####.###
 ###.##.####.##.#..##")
 
-(define (get-approx-guess m)
+
+;; Map -> (listof Point)
+;; produce map from list of points
+(define (map->points m)
+  (define (map->points x y acc chars)
+    (cond [(empty? chars) (reverse acc)]
+          [(char=? #\. (car chars))
+           (map->points (add1 x) y acc (cdr chars))]
+          [(char=? #\# (car chars))
+           (map->points (add1 x) y (cons (cons x y) acc) (cdr chars))]
+          [(char=? #\newline (car chars))
+           (map->points 0 (add1 y) acc (cdr chars))]))
+  (map->points 0 0 '() (string->list m)))
+
+
+;; Point Point -> Boolean
+;; <= comparison for two Points
+(define (pair<= p1 p2)
+  (and (<= (car p1) (car p2))
+       (<= (cdr p1) (cdr p2))))
+
+
+;; (listof Point) -> (listof Point)
+;; sort pts by <=
+(define (sort-pts pts)
+  (sort pair<= pts))
+
+
+;; Hashtable<Line, (listof Point)> -> Point -> Integer
+;; Produce thunk which calculates how many other asteroids (Points) visible
+;; from its position, taking into account line of sight. For each two asteroids:
+;; - 0 if no line from one to another asteroid
+;; - 1 if on end of line of sight
+;; - 2 otherwise (if in middle)
+(define (asteroids-visible ht)
+  (let [(vals (map sort-pts (vector->list (hashtable-values ht))))]
+    (lambda (pt)
+      (apply + (map
+                 (lambda (pts)
+                   (cond [(not (member pt pts)) 0]
+                         [(equal? pt (car pts)) 1]
+                         [(equal? pt (car (reverse pts))) 1]
+                         [else 2]))
+                 vals)))))
+
+
+;; Map -> Pair<?,?>
+(define (most-asteroids m)
   (let [(ht  (make-ht))
         (pts (map->points m))]
     (begin
       (add-points ht pts)
-      (cdar
-        (sort
-          (lambda (q r) (> (cdr q) (cdr r)))
-          (map cons pts (map (in-line? ht) pts)))))))
+      (let [(fn (asteroids-visible ht))]
+        (car
+          (sort
+            (lambda (q r) (> (cdr q) (cdr r)))
+            (map cons pts (map fn pts))))))))
+
+
+(let [(f (read-file "inputs/10.txt"))]
+  (display
+    (most-asteroids
+      (apply string-append
+             (map string-append f (map (lambda (_) "\n") (iota (length f))))))))
+
+
